@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<body>
+	
+	<style>
+	<!-- It wasn't specified in the instructions, but I wanted the UI to be pleasing to the eye -->
+	input[type=text], select{
+		color: #555555;
+		padding: 10px 10px;
+		margin: 8px 0;
+		display: inline-block;
+		border: 2px solid #555555;
+		border-radius: 4px;
+		box-sizing: border-box;
+	}
+	td{
+		border-top: 3px solid #555555;
+		padding: 30px;
+	}
+	table{
+		border-spacing: 0;
+	}
+	h1{
+		font-size: 50px;
+		color: #555555;
+	}
+	th{
+		color: #555555;
+		font-size: 25px;
+	}
+	img{
+		border: 2px solid #555555;
+		border-radius: 4px;
+	}
+	.little_style {
+	  -webkit-box-sizing: content-box;
+	  -moz-box-sizing: content-box;
+	  box-sizing: content-box;
+	  width: 1200px;
+	  padding: 30px;
+	  overflow: hidden;
+	  border: none;
+	  font: normal 16px/1 "Times New Roman", Times, serif;
+	  color: rgba(255,255,255,1);
+	  text-align: center;
+	  -o-text-overflow: ellipsis;
+	  text-overflow: ellipsis;
+	  background: #0199d9;
+	  -webkit-box-shadow: 1px 1px 1px 0 rgba(0,0,0,0.3) ;
+	  box-shadow: 1px 1px 1px 0 rgba(0,0,0,0.3) ;
+	  text-shadow: 1px 1px 1px rgba(0,0,0,0.2) ;
+	}
+	
+	textarea{
+		border: 2px solid #555555;
+		border-radius: 4px;
+		color: #555555;
+	}
+	
+	.buttonB {
+		background-color: white;
+		color: #555555;
+		border: 2px solid #555555;
+		border-radius: 4px;
+	}
+
+	.buttonB:hover {
+		background-color: #555555;
+		color: white;
+		border-radius: 4px;
+	}
+	
+	
+	</style>
+	
+	<div class="little_style">
+	
+		<h1>NUVI Challenge</h1>
+		
+		<br><br>
+		
+		<div id="table"></div>
+		<div id="JSON"></div>
+		<br><br><br>
+		<h1>Social Media Visualizations</h1>
+		<div style="border: 2px solid #555555; border-radius: 4px;" id="pielikes"></div>
+		<br><br><br>
+		<div style="border: 2px solid #555555; border-radius: 4px;" id="pieshares"></div>
+		<br><br><br>
+		<div style="border: 2px solid #555555; border-radius: 4px;" id="piecomments"></div>
+		<div id="cookies"></div>
+		
+	</div>
+	
+	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+		var arr;
+		var xmlhttp = new XMLHttpRequest();
+		var url = "https://nuvi-challenge.herokuapp.com/activities";
+		
+		var facebook_likes = 0;
+		var twitter_likes = 0;
+		var tumblr_likes = 0;
+		var instagram_likes = 0;
+		
+		var facebook_shares = 0;
+		var twitter_shares = 0;
+		var tumblr_shares = 0;
+		var instagram_shares = 0;
+		
+		var facebook_comments = 0;
+		var twitter_comments = 0;
+		var tumblr_comments = 0;
+		var instagram_comments = 0;
+
+		xmlhttp.onreadystatechange=function() {
+			if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+				gen_table(xmlhttp.responseText);
+				createCookie('SESSION', 'NUVI-12345', 1);
+			}
+		}
+		
+		xmlhttp.open("GET", url, true);
+		xmlhttp.send();
+		
+		
+		function gen_table(response) {
+			arr = JSON.parse(response);
+			//I wanted to make sure the pies were consistent with the recently parsed JSON
+			likes_counter();
+			shares_counter();
+			comments_counter();
+			drawPieLikes();
+			drawPieShares();
+			drawPieComments();
+			
+			//iterator for drawing the UI table
+			var i;
+			var out = "<table>";
+			out += "<th>Provider</th><th>Username</th><th>Content</th><th>Likes</th><th>Comments</th><th>Date</th>"
+			for(i = 0; i < arr.length; i++) {
+				out += "<tr style='height:92px;'><td>" + 
+				arr[i].provider.toUpperCase() +
+				"</td><td>" +
+				arr[i].actor_username +
+				"</td><td style='white-space: wrap;'>";
+				if(arr[i].activity_attachment_type == null)
+					out += arr[i].activity_message;
+				else
+					out += "<img src = '" + arr[i].activity_message + "' style='width:120px;height:92px;'></img>";
+				
+				out += "</td><td id='likes" + i + "'>" +
+				arr[i].activity_likes +
+				"</td><td id='comments" + i + "'>" +
+				arr[i].activity_comments +
+				"</td><td>" +
+				arr[i].activity_date +
+				"</td><td><button style='width: 53px;' id='like_button" + i + "' class='buttonB' type='button' onclick='liker(" + i + ")'>Like</button></td>" +
+				"<td><textarea id='ta" + i + "' rows='4' cols='20' placeholder='Write a comment...'></textarea>"
+				+ "<button class='buttonB' type='button' onclick='submitter(" + i + ")'>Comment</button></td></tr>";
+			}
+			out += "</table><br><br><br>";
+			document.getElementById("table").innerHTML = out;
+					
+		}	
+		
+		//this function allows you to like and then unlike a post, and updates the JSON file accordingly
+		function liker(id){
+			var liked = false;
+			var check = document.getElementById("like_button" + id).innerHTML;
+			if(check === "Like"){
+				document.getElementById("like_button" + id).innerHTML = "Unlike";
+				document.getElementById("likes" + id).innerHTML = ++arr[id].activity_likes;
+			}
+			else if(check === "Unlike"){
+				document.getElementById("like_button" + id).innerHTML = "Like";
+				document.getElementById("likes" + id).innerHTML = --arr[id].activity_likes;
+			}
+		}
+		
+		//this function pulls the text area input and dynamically appends an attribute to the targeted JSON object
+		function submitter(id){
+			var comment = document.getElementById("ta" + id).value;
+			if(comment !== ""){
+				document.getElementById("comments" + id).innerHTML = ++arr[id].activity_comments;
+				arr[id].activity_user_comment = comment;
+				document.getElementById("ta" + id).value = "";
+				
+				//this stringify is just to prove a comment was dynamically added to the specific JSON object
+				document.getElementById("JSON").innerHTML = JSON.stringify(arr[id]);
+			}
+		}
+		
+		//count likes for each provider
+		function likes_counter(){
+			for(i = 0; i < arr.length; i++) {
+				if(arr[i].provider === "facebook")
+					facebook_likes += arr[i].activity_likes;
+				else if(arr[i].provider === "instagram")
+					instagram_likes += arr[i].activity_likes;
+				else if(arr[i].provider === "tumblr")
+					tumblr_likes += arr[i].activity_likes;
+				else if(arr[i].provider === "twitter")
+					twitter_likes += arr[i].activity_likes;
+				
+			}
+		}
+		
+		//count shares for each provider
+		function shares_counter(){
+			for(i = 0; i < arr.length; i++) {
+				if(arr[i].provider === "facebook")
+					facebook_shares += arr[i].activity_shares;
+				else if(arr[i].provider === "instagram")
+					instagram_shares += arr[i].activity_shares;
+				else if(arr[i].provider === "tumblr")
+					tumblr_shares += arr[i].activity_shares;
+				else if(arr[i].provider === "twitter")
+					twitter_shares += arr[i].activity_shares;
+				
+			}
+		}
+		
+		//count comments for each provider
+		function comments_counter(){
+			for(i = 0; i < arr.length; i++) {
+				if(arr[i].provider === "facebook")
+					facebook_comments += arr[i].activity_comments;
+				else if(arr[i].provider === "instagram")
+					instagram_comments += arr[i].activity_comments;
+				else if(arr[i].provider === "tumblr")
+					tumblr_comments += arr[i].activity_comments;
+				else if(arr[i].provider === "twitter")
+					twitter_comments += arr[i].activity_comments;
+				
+			}
+		}
+		
+		//visualization section
+		google.charts.load('current', {'packages':['corechart']});
+		
+		//function for drawing comments pie
+		function drawPieComments() {
+			var data = google.visualization.arrayToDataTable([
+			  ['Media', 'Comments'],
+			  ['Facebook',facebook_comments],
+			  ['Tumblr',tumblr_comments],
+			  ['Instagram',instagram_comments],
+			  ['Twitter',twitter_comments]
+			]);
+
+			var options = {
+			  title: 'Social Media Comments',
+			  is3D: true,
+			  height: 300
+			};
+
+			var chart = new google.visualization.PieChart(document.getElementById('piecomments'));
+
+			chart.draw(data, options);
+		  }
+		
+		//function for drawing likes pie
+		function drawPieLikes() {
+			var data = google.visualization.arrayToDataTable([
+			  ['Media', 'Likes'],
+			  ['Facebook',facebook_likes],
+			  ['Tumblr',tumblr_likes],
+			  ['Instagram',instagram_likes],
+			  ['Twitter',twitter_likes]
+			]);
+
+			var options = {
+			  title: 'Social Media Likes',
+			  is3D: true,
+			  height: 300
+			};
+
+			var chart = new google.visualization.PieChart(document.getElementById('pielikes'));
+
+			chart.draw(data, options);
+		  }
+		  
+		  //function for drawing shares pie
+		  function drawPieShares() {
+			var data = google.visualization.arrayToDataTable([
+			  ['Media', 'Shares'],
+			  ['Facebook',facebook_shares],
+			  ['Tumblr',tumblr_shares],
+			  ['Instagram',instagram_shares],
+			  ['Twitter',twitter_shares]
+			]);
+
+			var options = {
+			  title: 'Social Media Shares',
+			  is3D: true,
+			  height: 300
+			};
+
+			var chart = new google.visualization.PieChart(document.getElementById('pieshares'));
+
+			chart.draw(data, options);
+		  }
+		  
+		function createCookie(name,value,days) {
+			if (days) {
+				var date = new Date();
+				date.setTime(date.getTime()+(days*24*60*60*1000));
+				var expires = "; expires="+date.toGMTString();
+			}
+			else var expires = "";
+			document.cookie = name+"="+value+expires+";";
+		}
+
+
+	</script>
+	
+	
+	</body>
+</html>
+# NUVI
